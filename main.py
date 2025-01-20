@@ -61,6 +61,8 @@ LOCATION_LIST = [
     'bus_station'
 ]
 
+RETURN_FIELDS = "places.shortFormattedAddress,places.displayName,places.formattedAddress,places.location"
+
 
 def get_random_place_in_city(city: str) -> str | None:
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -71,7 +73,7 @@ def get_random_place_in_city(city: str) -> str | None:
     try:
         response = requests.post(
             places_url,
-            headers={"X-Goog-Api-Key": api_key, "X-Goog-FieldMask": "places.shortFormattedAddress,places.displayName"},
+            headers={"X-Goog-Api-Key": api_key, "X-Goog-FieldMask": RETURN_FIELDS},
             json={
                 "locationRestriction": {
                     "circle": {
@@ -105,7 +107,7 @@ def get_random_place_in_city(city: str) -> str | None:
 def get_street_view_image(address: str) -> str:
     api_key = os.getenv("GOOGLE_API_KEY")
     url = f"https://maps.googleapis.com/maps/api/streetview"
-    params = {"size": "1920x1080", "location": address, "key": api_key, "fov": 75}
+    params = {"size": "1920x1080", "location": f"{address} Bend, OR", "key": api_key, "fov": 75}
 
     response = requests.get(url, params=params)
 
@@ -125,12 +127,12 @@ def main():
     # Login to Bluesky
     client.login(os.getenv("BLUESKY_USERNAME"), os.getenv("BLUESKY_PASSWORD"))
 
-    address, location_name =  get_random_place_in_city("Bend, OR")
+    address, location_name = get_random_place_in_city("Bend, OR")
     if not address:
         print("Failed to get a valid address.")
         return
 
-    image_path =  get_street_view_image(address)
+    image_path = get_street_view_image(location_name)
 
     with open(image_path, "rb") as f:
         image_data = f.read()
@@ -140,6 +142,9 @@ def main():
         image=image_data,
         image_alt=f"A Google Streetview image of {address}",
     )
+
+    # Remove the image file after posting
+    os.remove(image_path)
 
     print("Just posted!")
 
