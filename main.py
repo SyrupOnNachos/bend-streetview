@@ -66,6 +66,8 @@ def get_random_place_in_city(city: str) -> str | None:
     api_key = os.getenv("GOOGLE_API_KEY")
     places_url = "https://places.googleapis.com/v1/places:searchNearby"
 
+    randomized_locations = random.sample(LOCATION_LIST, 3)
+
     try:
         response = requests.post(
             places_url,
@@ -77,7 +79,7 @@ def get_random_place_in_city(city: str) -> str | None:
                         "radius": 7000,
                     }
                 },
-                "includedPrimaryTypes": LOCATION_LIST,
+                "includedPrimaryTypes": randomized_locations,
             },
         )
 
