@@ -69,7 +69,7 @@ def get_random_place_in_city(city: str) -> str | None:
     try:
         response = requests.post(
             places_url,
-            headers={"X-Goog-Api-Key": api_key, "X-Goog-FieldMask": "*"},
+            headers={"X-Goog-Api-Key": api_key, "X-Goog-FieldMask": "places.shortFormattedAddress,places.displayName"},
             json={
                 "locationRestriction": {
                     "circle": {
