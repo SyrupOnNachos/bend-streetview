@@ -95,12 +95,29 @@ def get_random_place_in_city(city: str) -> tuple[str, str, str] | None:
                     random_place = random.choice(places)
                     short_address = random_place.get("shortFormattedAddress")
                     display_name = random_place.get("displayName", "").get("text", "")
-                    photo_name = random_place.get("photos", [])[0].get("name", "")
+                    photo_name = None
+                    for photo in random_place.get("photos", []):
+                        photo_width = photo.get("widthPx", 0)
+                        photo_height = photo.get("heightPx", 0)
+                        if (
+                            photo_width <= 4800
+                            and photo_width >= 1080
+                            and photo_height <= 3600
+                            and photo_height >= 720
+                        ):
+                            photo_name = random_place.get("photos", [])[0].get(
+                                "name", ""
+                            )
+                            break
 
                     if short_address and display_name and photo_name:
+                        print(
+                            f"Selected place: {display_name} at {short_address}. Photo Name: {photo_name}"
+                        )
                         return short_address, display_name, photo_name
                     else:
                         places.remove(random_place)
+                print("No valid places found after filtering.")
             else:
                 print("No places found")
                 return None
@@ -116,7 +133,7 @@ def get_random_place_in_city(city: str) -> tuple[str, str, str] | None:
 def get_place_photo(photo_name: str, location_name: str) -> str:
     api_key = os.getenv("GOOGLE_API_KEY")
     url = f"https://places.googleapis.com/v1/{photo_name}/media"
-    params = {"maxHeightPx": 1920, "key": api_key}
+    params = {"maxHeightPx": 1920, "maxWidthPx": 1080, "key": api_key}
 
     response = requests.get(url, params=params)
 
@@ -136,12 +153,18 @@ def main():
     # Login to Bluesky
     client.login(os.getenv("BLUESKY_USERNAME"), os.getenv("BLUESKY_PASSWORD"))
 
-    address, location_name, photo_name = get_random_place_in_city("Bend, OR")
-    if not address:
-        print("Failed to get a valid address.")
-        return
+    while True:
+        address, location_name, photo_name = get_random_place_in_city("Bend, OR")
 
-    image_path = get_place_photo(photo_name, location_name)
+        image_path = get_place_photo(photo_name, location_name)
+
+        image_size = os.path.getsize(image_path)  # in bytes
+        image_size_kb = image_size / 1024  # in KB
+
+        if image_size_kb <= 976:
+            break
+
+        print(f"Image size: {image_size_kb:.2f} KB, retrying...")
 
     with open(image_path, "rb") as f:
         image_data = f.read()
@@ -155,7 +178,7 @@ def main():
     # Remove the image file after posting
     os.remove(image_path)
 
-    print("Just posted!")
+    print(f"Just posted {location_name}!")
 
 
 main()
