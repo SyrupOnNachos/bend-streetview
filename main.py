@@ -23,51 +23,51 @@ LOCATION_LIST = [
     "performing_arts_theater",
     "sculpture",
     "library",
-    'adventure_sports_center',
-    'bowling_alley',
-    'comedy_club',
-    'community_center',
-    'concert_hall',
-    'convention_center',
-    'cultural_center',
-    'cycling_park',
-    'dog_park',
-    'hiking_area',
-    'historical_landmark',
-    'movie_theater',
-    'park',
-    'skateboard_park',
-    'state_park',
-    'tourist_attraction',
-    'visitor_center',
-    'city_hall',
-    'courthouse',
-    'fire_station',
-    'police',
-    'post_office',
-    'apartment_building',
-    'apartment_complex',
-    'church',
-    'hindu_temple',
-    'mosque',
-    'synagogue',
-    'bicycle_store',
-    'book_store',
-    'athletic_field',
-    'ice_skating_rink',
-    'swimming_pool',
-    'sports_complex',
-    'sports_club',
-    'bus_station'
+    "adventure_sports_center",
+    "bowling_alley",
+    "comedy_club",
+    "community_center",
+    "concert_hall",
+    "convention_center",
+    "cultural_center",
+    "cycling_park",
+    "dog_park",
+    "hiking_area",
+    "historical_landmark",
+    "movie_theater",
+    "park",
+    "skateboard_park",
+    "state_park",
+    "tourist_attraction",
+    "visitor_center",
+    "city_hall",
+    "courthouse",
+    "fire_station",
+    "police",
+    "post_office",
+    "apartment_building",
+    "apartment_complex",
+    "church",
+    "hindu_temple",
+    "mosque",
+    "synagogue",
+    "bicycle_store",
+    "book_store",
+    "athletic_field",
+    "ice_skating_rink",
+    "swimming_pool",
+    "sports_complex",
+    "sports_club",
+    "bus_station",
 ]
 
-RETURN_FIELDS = "places.shortFormattedAddress,places.displayName,places.formattedAddress,places.location"
+RETURN_FIELDS = (
+    "places.shortFormattedAddress,places.displayName,places.photos,places.location"
+)
 
-
-def get_random_place_in_city(city: str) -> str | None:
+def get_random_place_in_city(city: str) -> tuple[str, str, str] | None:
     api_key = os.getenv("GOOGLE_API_KEY")
     places_url = "https://places.googleapis.com/v1/places:searchNearby"
-
     randomized_locations = random.sample(LOCATION_LIST, 3)
 
     try:
@@ -91,10 +91,19 @@ def get_random_place_in_city(city: str) -> str | None:
         if response.status_code == 200:
             places = data["places"]
             if places:
-                random_place = random.choice(places)
-                return random_place.get("shortFormattedAddress"), random_place.get(
-                    "displayName", ""
-                ).get("text", "")
+                while places:
+                    random_place = random.choice(places)
+                    short_address = random_place.get("shortFormattedAddress")
+                    display_name = random_place.get("displayName", "").get("text", "")
+                    photo_name = random_place.get("photos", [])[0].get("name", "")
+
+                    if short_address and display_name and photo_name:
+                        return short_address, display_name, photo_name
+                    else:
+                        places.remove(random_place)
+            else:
+                print("No places found")
+                return None
         else:
             print(f"Places API error: {data['status']}")
             return None
@@ -104,10 +113,10 @@ def get_random_place_in_city(city: str) -> str | None:
         return None
 
 
-def get_street_view_image(address: str) -> str:
+def get_place_photo(photo_name: str, location_name: str) -> str:
     api_key = os.getenv("GOOGLE_API_KEY")
-    url = f"https://maps.googleapis.com/maps/api/streetview"
-    params = {"size": "1920x1080", "location": f"{address} Bend, OR", "key": api_key, "fov": 75}
+    url = f"https://places.googleapis.com/v1/{photo_name}/media"
+    params = {"maxHeightPx": 1920, "key": api_key}
 
     response = requests.get(url, params=params)
 
@@ -115,8 +124,8 @@ def get_street_view_image(address: str) -> str:
     images_dir = Path(__file__).parent / "images"
     images_dir.mkdir(exist_ok=True)
 
-    # Create safe filename from address
-    safe_filename = re.sub(r"[^a-zA-Z0-9]", "_", address) + ".jpg"
+    # Create safe filename from photo reference
+    safe_filename = re.sub(r"[^a-zA-Z0-9]", "_", location_name) + ".jpg"
     image_path = images_dir / safe_filename
 
     image_path.write_bytes(response.content)
@@ -127,12 +136,12 @@ def main():
     # Login to Bluesky
     client.login(os.getenv("BLUESKY_USERNAME"), os.getenv("BLUESKY_PASSWORD"))
 
-    address, location_name = get_random_place_in_city("Bend, OR")
+    address, location_name, photo_name = get_random_place_in_city("Bend, OR")
     if not address:
         print("Failed to get a valid address.")
         return
 
-    image_path = get_street_view_image(location_name)
+    image_path = get_place_photo(photo_name, location_name)
 
     with open(image_path, "rb") as f:
         image_data = f.read()
@@ -140,7 +149,7 @@ def main():
     client.send_image(
         text=f"{location_name + ' at ' if location_name else ''}{address}",
         image=image_data,
-        image_alt=f"A Google Streetview image of {address}",
+        image_alt=f"An image from Google Maps of {location_name} at {address}",
     )
 
     # Remove the image file after posting
