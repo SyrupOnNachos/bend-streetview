@@ -1,11 +1,9 @@
-import asyncio
 import os
 import random
 import requests
 import re
 from dotenv import load_dotenv
 from atproto import Client
-from crontab import CronTab
 from pathlib import Path
 
 load_dotenv()
@@ -59,6 +57,27 @@ LOCATION_LIST = [
     "sports_complex",
     "sports_club",
     "bus_station",
+    "bakery",
+    "movie_rental",
+    "school",
+    "campground",
+    "florist",
+    "gym",
+    "hospital",
+    "local_government_office",
+    "lodging",
+    "pet_store",
+    "restaurant",
+    "shopping_mall",
+    "spa",
+    "stadium",
+    "supermarket",
+    "transit_station",
+    "train_station",
+    "travel_agency",
+    "university",
+    "veterinary_care",
+    "zoo",
 ]
 
 RETURN_FIELDS = (
